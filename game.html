@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ฟังให้ดี ดูให้เป็น พูดให้สร้างสรรค์</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:system-ui,-apple-system,"Noto Sans Thai",sans-serif;
+    background:linear-gradient(135deg,#eef7ff,#fff7ed);
+    color:#24324a;min-height:100vh;padding:20px
+  }
+  .wrap{max-width:760px;margin:auto}
+  .card{
+    background:#fff;border-radius:24px;padding:24px;
+    box-shadow:0 12px 35px rgba(45,65,90,.12);
+  }
+  h1{margin:0 0 8px;text-align:center;font-size:clamp(24px,5vw,34px)}
+  .subtitle{text-align:center;color:#65738a;margin-bottom:20px}
+  .top{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .badge{background:#edf3ff;border-radius:999px;padding:8px 13px;font-weight:700}
+  .progress{height:10px;background:#e9edf3;border-radius:99px;overflow:hidden;margin-bottom:22px}
+  .bar{height:100%;width:0;background:#4778e6;transition:width .25s}
+  .question{font-size:21px;font-weight:800;line-height:1.5;margin-bottom:14px}
+  .choice{
+    display:block;width:100%;text-align:left;margin:10px 0;padding:14px 16px;
+    border:2px solid #e1e6ee;border-radius:15px;background:#fff;
+    font-size:16px;cursor:pointer;transition:.15s
+  }
+  .choice:hover{border-color:#4778e6;background:#f7faff}
+  .choice:disabled{cursor:default}
+  .correct{border-color:#2e9b62!important;background:#ecfaf2!important}
+  .wrong{border-color:#d45b5b!important;background:#fff0f0!important}
+  .feedback{min-height:28px;margin-top:12px;font-weight:700;line-height:1.5}
+  button.next,.restart{
+    border:0;background:#4778e6;color:#fff;padding:13px 20px;border-radius:13px;
+    font-size:16px;font-weight:800;cursor:pointer;margin-top:12px
+  }
+  button.next:hover,.restart:hover{filter:brightness(.95)}
+  .result{text-align:center;padding:15px 5px}
+  .result .big{font-size:42px;font-weight:900}
+  .score{font-size:26px;font-weight:900;margin:10px 0}
+  .hint{font-size:14px;color:#65738a;margin-top:18px;text-align:center}
+  .hidden{display:none}
+  @media(max-width:480px){body{padding:12px}.card{padding:18px}.question{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>🎧 ฟังให้ดี ดูให้เป็น พูดให้สร้างสรรค์</h1>
+    <div class="subtitle">เกมภาษาไทย • สาระที่ 3 การฟัง การดู และการพูด • มาตรฐาน ท 3.1</div>
+
+    <div id="game">
+      <div class="top">
+        <div class="badge" id="progressText">ข้อ 1 / 10</div>
+        <div class="badge" id="scoreText">คะแนน 0</div>
+      </div>
+      <div class="progress"><div class="bar" id="bar"></div></div>
+
+      <div class="question" id="question"></div>
+      <div id="choices"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <button class="next hidden" id="next" type="button">ข้อถัดไป →</button>
+    </div>
+
+    <div id="result" class="result hidden">
+      <div class="big">🏆 จบเกม!</div>
+      <div class="score" id="finalScore"></div>
+      <p id="message"></p>
+      <button class="restart" id="restart" type="button">🔄 เล่นอีกครั้ง</button>
+    </div>
+
+    <div class="hint">ฝึกคิดก่อนเชื่อ ฟังอย่างตั้งใจ ดูอย่างรอบคอบ และพูดด้วยเหตุผล</div>
+  </div>
+</div>
+
+<script>
+const questions = [
+  {
+    q:"ถ้านักเรียนดูข่าวจากอินเทอร์เน็ต ควรทำสิ่งใดก่อนเชื่อข้อมูล?",
+    choices:["แชร์ต่อทันที","ตรวจสอบแหล่งที่มาและข้อมูลจากหลายแหล่ง","เชื่อเพราะมีคนกดถูกใจมาก","เชื่อเพราะภาพดูน่าเชื่อถือ"],
+    answer:1,
+    explain:"ควรตรวจสอบแหล่งที่มาและเปรียบเทียบข้อมูลจากหลายแหล่งก่อนเชื่อ"
+  },
+  {
+    q:"ข้อใดเป็นการฟังอย่างมีวิจารณญาณ?",
+    choices:["ฟังแล้วเชื่อทุกอย่าง","ฟังเฉพาะสิ่งที่ตนเองชอบ","ฟัง จับใจความ และพิจารณาความน่าเชื่อถือ","ฟังไปคุยกับเพื่อนไป"],
+    answer:2,
+    explain:"การฟังอย่างมีวิจารณญาณต้องจับใจความและพิจารณาความน่าเชื่อถือ"
+  },
+  {
+    q:"เมื่อเพื่อนพูดความคิดเห็นที่แตกต่างจากเรา ควรทำอย่างไร?",
+    choices:["พูดแทรกทันที","หัวเราะเยาะ","รับฟังและแสดงความคิดเห็นอย่างสุภาพ","เดินหนีทันที"],
+    answer:2,
+    explain:"ควรรับฟังความคิดเห็นที่แตกต่างและตอบด้วยถ้อยคำสุภาพ"
+  },
+  {
+    q:"ถ้าพบคลิปที่มีเนื้อหาไม่เหมาะสม นักเรียนควรทำอย่างไร?",
+    choices:["ส่งต่อให้เพื่อน","ดูซ้ำหลายครั้ง","พิจารณาความเหมาะสมและหลีกเลี่ยงการเผยแพร่","ตัดต่อแล้วโพสต์ใหม่"],
+    answer:2,
+    explain:"ควรพิจารณาความเหมาะสมและไม่เผยแพร่เนื้อหาที่ไม่เหมาะสม"
+  },
+  {
+    q:"ข้อใดเป็นการพูดแสดงความคิดเห็นที่สร้างสรรค์?",
+    choices:["“เธอคิดผิดแน่นอน”","“ฉันไม่เห็นด้วย เพราะมีเหตุผลว่า...”","“ไม่ต้องพูดแล้ว”","“ทุกคนต้องคิดเหมือนฉัน”"],
+    answer:1,
+    explain:"การแสดงความคิดเห็นที่สร้างสรรค์ควรใช้เหตุผลและถ้อยคำสุภาพ"
+  },
+  {
+    q:"เมื่อดูโฆษณาสินค้า นักเรียนควรพิจารณาสิ่งใด?",
+    choices:["เฉพาะคำโฆษณาที่น่าสนใจ","ข้อมูลและหลักฐานว่าสินค้าน่าเชื่อถือหรือไม่","จำนวนสีในโฆษณา","เพลงประกอบเท่านั้น"],
+    answer:1,
+    explain:"ควรพิจารณาข้อมูล หลักฐาน และความน่าเชื่อถือของโฆษณา"
+  },
+  {
+    q:"หากฟังเรื่องหนึ่งแล้วไม่เข้าใจ ควรทำอย่างไร?",
+    choices:["เดาเองแล้วสรุปทันที","ถามเพื่อขอคำอธิบายเพิ่มเติม","เลิกฟัง","บอกว่าเรื่องนั้นไม่สำคัญ"],
+    answer:1,
+    explain:"เมื่อไม่เข้าใจควรถามหรือขอคำอธิบายเพิ่มเติม"
+  },
+  {
+    q:"ข้อใดแสดงว่าผู้พูดมีมารยาทในการพูด?",
+    choices:["พูดเสียงดังใส่ผู้อื่น","พูดแทรกตลอดเวลา","ใช้คำสุภาพและเคารพผู้ฟัง","ล้อเลียนผู้ฟัง"],
+    answer:2,
+    explain:"การใช้คำสุภาพและเคารพผู้ฟังเป็นมารยาทที่เหมาะสม"
+  },
+  {
+    q:"ถ้าเห็นข้อมูลในสื่อที่มีข้อความว่า “จริง 100%” นักเรียนควรทำอย่างไร?",
+    choices:["เชื่อทันที","ตรวจสอบหลักฐานและแหล่งข้อมูล","แชร์ทันที","บอกเพื่อนทุกคนให้เชื่อ"],
+    answer:1,
+    explain:"ข้อความในสื่อควรตรวจสอบหลักฐานและแหล่งข้อมูลก่อนเชื่อ"
+  },
+  {
+    q:"เป้าหมายสำคัญของการฟัง ดู และพูดอย่างมีวิจารณญาณคืออะไร?",
+    choices:["เพื่อพูดให้ชนะผู้อื่น","เพื่อรับข้อมูล คิดพิจารณา และสื่อสารอย่างเหมาะสม","เพื่อพูดให้ดังที่สุด","เพื่อเชื่อข้อมูลทุกอย่าง"],
+    answer:1,
+    explain:"ทักษะนี้ช่วยให้รับข้อมูลอย่างรอบคอบ คิดพิจารณา และสื่อสารได้เหมาะสม"
+  }
+];
+
+let current = 0;
+let score = 0;
+let answered = false;
+
+const $ = id => document.getElementById(id);
+const questionEl = $("question");
+const choicesEl = $("choices");
+const feedbackEl = $("feedback");
+const nextBtn = $("next");
+const progressText = $("progressText");
+const scoreText = $("scoreText");
+const bar = $("bar");
+
+function renderQuestion(){
+  answered = false;
+  const item = questions[current];
+  progressText.textContent = `ข้อ ${current + 1} / ${questions.length}`;
+  scoreText.textContent = `คะแนน ${score}`;
+  bar.style.width = `${(current / questions.length) * 100}%`;
+  questionEl.textContent = item.q;
+  choicesEl.innerHTML = "";
+  feedbackEl.textContent = "";
+  nextBtn.classList.add("hidden");
+
+  item.choices.forEach((choice,index)=>{
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "choice";
+    btn.textContent = `${String.fromCharCode(65+index)}. ${choice}`;
+    btn.addEventListener("click",()=>answerQuestion(index,btn));
+    choicesEl.appendChild(btn);
+  });
+}
+
+function answerQuestion(selected, selectedBtn){
+  if(answered) return;
+  answered = true;
+  const item = questions[current];
+  const buttons = [...choicesEl.querySelectorAll(".choice")];
+
+  buttons.forEach((btn,index)=>{
+    btn.disabled = true;
+    if(index === item.answer) btn.classList.add("correct");
+  });
+
+  if(selected === item.answer){
+    score++;
+    selectedBtn.classList.add("correct");
+    feedbackEl.textContent = `✅ ถูกต้อง! ${item.explain}`;
+  }else{
+    selectedBtn.classList.add("wrong");
+    feedbackEl.textContent = `💡 ยังไม่ถูก: ${item.explain}`;
+  }
+
+  scoreText.textContent = `คะแนน ${score}`;
+  nextBtn.textContent = current === questions.length - 1 ? "ดูผลคะแนน 🏆" : "ข้อถัดไป →";
+  nextBtn.classList.remove("hidden");
+}
+
+nextBtn.addEventListener("click",()=>{
+  if(current < questions.length - 1){
+    current++;
+    renderQuestion();
+  }else{
+    $("game").classList.add("hidden");
+    $("result").classList.remove("hidden");
+    $("finalScore").textContent = `ได้ ${score} / ${questions.length} คะแนน`;
+    const percent = score / questions.length * 100;
+    $("message").textContent =
+      percent === 100 ? "🌟 ยอดเยี่ยม! คุณฟัง ดู และพูดอย่างมีวิจารณญาณได้ดีมาก"
+      : percent >= 70 ? "👏 เก่งมาก! ฝึกคิดและตรวจสอบข้อมูลต่อไปนะ"
+      : "💪 ลองเล่นอีกครั้งและฝึกคิดก่อนเชื่อข้อมูลนะ";
+  }
+});
+
+$("restart").addEventListener("click",()=>{
+  current = 0;
+  score = 0;
+  $("result").classList.add("hidden");
+  $("game").classList.remove("hidden");
+  renderQuestion();
+});
+
+renderQuestion();
+</script>
+</body>
+</html>
